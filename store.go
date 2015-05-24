@@ -47,8 +47,9 @@ type store struct {
 	initialized bool
 }
 
-func NewReadWriteableStore(path string) ReadWriteableStore {
-	return newStore(path)
+func NewReadWriteableStore(path string) (ReadWriteableStore, error) {
+	s := newStore(path)
+	return s, s.Initialize()
 }
 
 func newStore(path string) *store {
