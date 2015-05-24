@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"log"
+	"mime"
 	"net/http"
 
 	"github.com/skyec/astore"
@@ -28,7 +29,8 @@ func (h *AppendHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if r.Header.Get("Content-Type") != "application/json" {
+	t, _, err := mime.ParseMediaType(r.Header.Get("Content-Type"))
+	if err != nil || t != "application/json" {
 		writeErrorResponse(w, r, ErrorInvalidContentType)
 		return
 	}

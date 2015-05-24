@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"mime"
 	"net/http"
 	"testing"
 
@@ -58,6 +59,14 @@ func TestHandlerReadAll(t *testing.T) {
 
 	if w.Code != http.StatusOK {
 		t.Errorf("invalid response code. Expected 200, got: %d", w.Code)
+	}
+
+	ct, _, err := mime.ParseMediaType(w.Header().Get("Content-Type"))
+	if err != nil {
+		t.Errorf("Invalid response Content-Type: %s", err)
+	}
+	if ct != "application/json" {
+		t.Errorf("Content type isn't json: %s", ct)
 	}
 
 	expected := bytes.Buffer{}

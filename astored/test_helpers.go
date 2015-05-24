@@ -17,7 +17,7 @@ func helpNewRequestResponse(rb, wb *bytes.Buffer) (*http.Request, *httptest.Resp
 	if r.Header == nil {
 		r.Header = map[string][]string{}
 	}
-	r.Header.Set("Content-Type", "application/json")
+	r.Header.Set("Content-Type", "application/json; charset=utf-8")
 	r.Header.Set("User-Agent", "test")
 
 	r.URL, _ = url.Parse("/v1/keys")
