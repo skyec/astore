@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"os"
 	"strings"
 
 	"github.com/gorilla/mux"
@@ -20,9 +21,11 @@ func main() {
 		kafkaEnabled bool
 		kafkaBrokers *flagKafkaBrokers = &flagKafkaBrokers{}
 		kafkaTopic   string
+		purge        bool
 	)
 
 	flag.StringVar(&storeDir, "s", "/var/astore", "Directory that contains the store data")
+	flag.BoolVar(&purge, "PURGE", false, "Purge the store of all data. WARNING: you can't recover from this!!")
 	flag.StringVar(&listenAddr, "l", ":9898", "Port the main service listens on")
 	flag.BoolVar(&kafkaEnabled, "K", false, "Enable consuming events from Kafka")
 	flag.StringVar(&kafkaTopic, "topic", "astore", "Kafka topic to consume events from")
@@ -35,6 +38,13 @@ func main() {
 	store, err := astore.NewReadWriteableStore(storeDir)
 	if err != nil {
 		log.Fatalln("Error initializing the store:", err)
+	}
+
+	if purge {
+		log.Println("Purging the datastore at:", storeDir)
+		store.Purge()
+		log.Println("Done.")
+		os.Exit(1)
 	}
 
 	var vars MuxVars = mux.Vars
