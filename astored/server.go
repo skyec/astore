@@ -24,7 +24,7 @@ func main() {
 
 	flag.StringVar(&storeDir, "s", "/var/astore", "Directory that contains the store data")
 	flag.StringVar(&listenAddr, "l", ":9898", "Port the main service listens on")
-	flag.BoolVar(&kafkaEnabled, "k", false, "Enable consuming events from Kafka")
+	flag.BoolVar(&kafkaEnabled, "K", false, "Enable consuming events from Kafka")
 	flag.StringVar(&kafkaTopic, "topic", "astore", "Kafka topic to consume events from")
 	flag.Var(kafkaBrokers, "brokers", "List of Kafka brokers if enabled e.g. kafka://b1:9092,b2:9092")
 
