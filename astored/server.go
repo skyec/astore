@@ -21,7 +21,7 @@ func main() {
 
 	flag.Parse()
 
-	store := astore.NewStore(storeDir)
+	store := astore.NewReadWriteableStore(storeDir)
 
 	var vars MuxVars = mux.Vars
 

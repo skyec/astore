@@ -65,5 +65,8 @@ func (bs *boltStore) Put(key []byte, value []byte) error {
 		return fmt.Errorf("update error: %s", err)
 	}
 	return nil
+}
 
+func (bs *boltStore) Close() error {
+	return bs.db.Close()
 }

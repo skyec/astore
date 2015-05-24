@@ -10,8 +10,9 @@ import (
 )
 
 func TestInitializeAndPurgeInterface(t *testing.T) {
-	store := NewStore("/tmp/alfs-test")
+	store := newStore("/tmp/alfs-test")
 	defer store.Purge() // Purge is idempotent
+	defer store.Close()
 
 	err := store.Initialize()
 	if err != nil {
@@ -35,8 +36,9 @@ func TestAppend(t *testing.T) {
 	}
 
 	log.Printf("Temp Dir: %s", dir)
-	store := NewStore(dir)
+	store := newStore(dir)
 	defer store.Purge()
+	defer store.Close()
 
 	err = store.Initialize()
 	if err != nil {
@@ -58,8 +60,9 @@ func TestRead(t *testing.T) {
 	}
 
 	log.Printf("Temp Dir: %s", dir)
-	store := NewStore(dir)
+	store := newStore(dir)
 	defer store.Purge()
+	defer store.Close()
 
 	err = store.Initialize()
 	if err != nil {
@@ -110,7 +113,7 @@ func TestReadFunc(t *testing.T) {
 	helpInitStore(t, dir, testKey, bodies[0])
 	helpInitStore(t, dir, testKey, bodies[1])
 
-	store := NewStore(dir)
+	store := newStore(dir)
 	defer store.Purge()
 
 	next := 0
@@ -143,15 +146,19 @@ func TestReadFunc(t *testing.T) {
 }
 
 func helpInitStore(t *testing.T, dir, key, payload string) {
-	store := NewStore(dir)
+	st := newStore(dir)
 
-	err := store.Initialize()
+	err := st.Initialize()
 	if err != nil {
 		t.Fatal("Failed to initialize the store:", err)
 	}
 
-	err = store.WriteToKey(key, []byte(payload))
+	err = st.WriteToKey(key, []byte(payload))
 	if err != nil {
 		t.Fatal("Error saving test data:", err)
+	}
+	err = st.Close()
+	if err != nil {
+		t.Fatal("Error closing store:", err)
 	}
 }

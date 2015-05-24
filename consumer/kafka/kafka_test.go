@@ -53,6 +53,10 @@ func (s *mocStore) Purge() {
 
 }
 
+func (s *mocStore) Close() error {
+	return nil
+}
+
 type ktest struct {
 	ExpectOFfset int64
 	t            *testing.T

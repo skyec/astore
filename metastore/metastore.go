@@ -3,6 +3,7 @@ package metastore
 type KVStore interface {
 	Get(key []byte) ([]byte, error)
 	Put(key []byte, value []byte) error
+	Close() error
 }
 
 type KVStoreType int
