@@ -1,12 +1,7 @@
-.PHONY: test test-astored test-all clean clean-astored clean-all install image
+.PHONY: test clean clean-astored clean-all install image
 
 test:
-	go test
-
-test-astored:
-	$(MAKE) -C astored test
-
-test-all: test test-astored
+	go test ./...
 
 clean: 
 	rm -rf *.dat
