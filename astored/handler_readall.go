@@ -34,19 +34,22 @@ func (h *HandlerReadAll) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	wr.Write([]byte("["))
-	count := 0
-	err := h.store.ReadEachFromKey(key, func(r io.Reader) error {
+
+	contentCount, err := h.store.GetCountFromKey(key)
+	if err != nil {
+		log.Printf("ERROR: failed to read the key count: %s", err)
+		writeErrorResponse(w, r, ErrorStoreError)
+		return
+	}
+
+	count := 1
+	err = h.store.ReadEachFromKey(key, func(r io.Reader) error {
 		_, err := io.Copy(wr, r)
 		if err != nil {
 			return err
 		}
 
-		n, err := h.store.GetCountFromKey(key)
-		if err != nil {
-			return err
-		}
-
-		if count < n {
+		if count < contentCount {
 			wr.Write([]byte(","))
 		}
 		count++
@@ -55,11 +58,11 @@ func (h *HandlerReadAll) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	wr.Write([]byte("]"))
 
 	if err != nil {
-		log.Println("error writing response:", err)
+		log.Println("ERROR: failed while writing response:", err)
 	}
 
 	if wr.err != nil {
-		log.Println("error writing response:", wr.err)
+		log.Println("ERROR: failed while writing response:", err)
 		return
 	}
 	logRequest(r, http.StatusOK)

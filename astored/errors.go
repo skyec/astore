@@ -23,6 +23,7 @@ const (
 	ErrorInvalidContentType
 	ErrorNotFound
 	ErrorMissingKey
+	ErrorStoreError
 )
 
 func init() {
@@ -62,6 +63,13 @@ func init() {
 			http.StatusBadRequest,
 			ErrorMissingKey,
 			"Missing 'key' in the request URL",
+		},
+
+		// ErrorStoreError: error interacting with the underlying store
+		ErrorStoreError: &ErrorResponse{
+			http.StatusInternalServerError,
+			ErrorStoreError,
+			"Error interacting with the store",
 		},
 	}
 }
