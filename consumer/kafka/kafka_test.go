@@ -183,7 +183,7 @@ func TestPersistOffset(t *testing.T) {
 	k.Close()
 	kt.close()
 
-	hwMark := kt.pc.HighWaterMarkOffset() - 1
+	hwMark := kt.pc.HighWaterMarkOffset()
 	if k.Offset() != hwMark {
 		t.Errorf("expected %d: got: %d", hwMark, k.Offset())
 	}

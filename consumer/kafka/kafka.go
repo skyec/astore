@@ -85,7 +85,7 @@ func (k *Kafka) Run() (err error) {
 					log.Println("ERROR: writing to store:", err)
 				}
 
-				k.offset = msg.Offset
+				k.offset = msg.Offset + 1
 				k.storeOffset()
 
 			case <-k.chdone:
