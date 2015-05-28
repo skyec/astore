@@ -1,0 +1,5 @@
+.vagrant
+*.test
+astored/astored
+*.DS_Store
+*.out
