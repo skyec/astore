@@ -42,7 +42,7 @@ func (h *HandlerReadAll) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	count := 1
+	count := 0
 	err = h.store.ReadEachFromKey(key, func(r io.Reader) error {
 		_, err := io.Copy(wr, r)
 		if err != nil {

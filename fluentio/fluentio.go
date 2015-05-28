@@ -68,8 +68,13 @@ func (fl *Writer) Flush() *Writer {
 	return fl
 }
 
-// Sync calls os.Sync on the opened file. This function is a NOP if a previous call generated an error
-func (fl *Writer) Sync() *Writer {
+// Sync calls os.Sync on the opened file. This function is a NOP if enabled is false or if a previous call
+// generated an error.
+func (fl *Writer) Sync(enabled bool) *Writer {
+
+	if !enabled {
+		return fl
+	}
 
 	if fl.err != nil {
 		return fl

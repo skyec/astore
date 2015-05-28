@@ -8,6 +8,7 @@ import (
 	"io"
 	"os"
 	"path"
+	"strings"
 
 	"github.com/skyec/astore/fluentio"
 )
@@ -17,6 +18,7 @@ const (
 	defaultFilePermisions = 0644
 	MAX_HASH_LOG_SIZE     = 41 * 1024 * 1024
 	MAX_CONTENT_FILE_SIZE = 500 * 1024
+	MIN_GZ_SIZE           = 160
 )
 
 type Key struct {
@@ -30,9 +32,13 @@ type Key struct {
 	maxHlogSz          uint     // maximum size of the hashlog; usually MAX_HASH_LOG_SIZE
 	maxContentSz       uint     //maximum size of a content file; usuall MAX_CONTENT_FILE_SIZE
 	hashes             []string // array of hashes of the stored parts for this key
+	syncEnabled        bool     // calls os.File.Sync for every write if enabled
 
 }
 
+// OpenKey opens the key, keyName and basePath. A *Key or error is returned. If the DISABLE_ASTORE_FSYNC
+// environment variable is set (to any value - even zero), then writes are made without calling os.File.Sync.
+// This improves performance significantly but increases the risk of data corruption.
 func OpenKey(basePath, keyName string) (*Key, error) {
 
 	key := &Key{
@@ -41,6 +47,7 @@ func OpenKey(basePath, keyName string) (*Key, error) {
 		baseDir:         basePath,
 		maxHlogSz:       MAX_HASH_LOG_SIZE,
 		maxContentSz:    MAX_CONTENT_FILE_SIZE,
+		syncEnabled:     true,
 	}
 
 	key.keyDir = fmt.Sprintf("%s/%s/%s/%s/%s",
@@ -53,13 +60,17 @@ func OpenKey(basePath, keyName string) (*Key, error) {
 	key.keyDataDir = fmt.Sprintf("%s/data", key.keyDir)
 	key.keyHashLogFileName = fmt.Sprintf("%s/txlog", key.keyDir)
 
+	if len(os.Getenv("DISABLE_ASTORE_FSYNC")) > 0 {
+		key.syncEnabled = false
+	}
 	return key, nil
 }
 
 // TODO: add an interface that takes an io.Reader to stream larger messags
 func (k *Key) Append(data []byte) error {
 
-	if uint(len(data)) > k.maxContentSz {
+	cSize := uint(len(data))
+	if cSize > k.maxContentSz {
 		return fmt.Errorf("content size (%d) is greater than the maximum (%d)", len(data), k.maxContentSz)
 	}
 
@@ -70,8 +81,12 @@ func (k *Key) Append(data []byte) error {
 		}
 
 	}
+	fileEx := "bin"
+	if cSize >= MIN_GZ_SIZE {
+		fileEx = "gz"
+	}
 
-	dataFileName := fmt.Sprintf("%s/%X.gz", k.keyDataDir, sha1.Sum(data))
+	dataFileName := fmt.Sprintf("%s/%X.%s", k.keyDataDir, sha1.Sum(data), fileEx)
 
 	if _, err := os.Stat(dataFileName); err == nil {
 
@@ -82,16 +97,13 @@ func (k *Key) Append(data []byte) error {
 
 	dataWriter := fluentio.OpenFile(dataFileName, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, defaultFilePermisions)
 
-	// TODO: only gzip larger files
-	//
-	//       Or combine several files together to improve compression and only compress when the combined size
-	//       is over some threashold (e.g. 200 bytes)
-	gzipWriter := gzip.NewWriter(dataWriter.GetFile())
+	if cSize >= MIN_GZ_SIZE {
+		dataWriter.SetWriter(gzip.NewWriter(dataWriter.GetFile()))
+	}
 
-	err := dataWriter.SetWriter(gzipWriter).
-		Write(data).
+	err := dataWriter.Write(data).
 		Flush().
-		Sync().
+		Sync(k.syncEnabled).
 		Close()
 
 	if err != nil {
@@ -109,7 +121,7 @@ func (k *Key) Append(data []byte) error {
 		Stat(checkFileSzFn).
 		Write([]byte(fmt.Sprintf("%s\n", path.Base(dataFileName)))).
 		Flush().
-		Sync().
+		Sync(k.syncEnabled).
 		Close()
 
 	return err
@@ -145,9 +157,13 @@ func (k *Key) ReadEach(r ReadFunc) error {
 				return err
 			}
 			defer file.Close()
-			reader, err := gzip.NewReader(file)
-			if err != nil {
-				return err
+
+			var reader io.Reader = file
+			if strings.HasSuffix(fname, ".gz") {
+				reader, err = gzip.NewReader(file)
+				if err != nil {
+					return err
+				}
 			}
 			return r(reader)
 		}()

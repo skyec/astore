@@ -2,6 +2,7 @@ package astore
 
 import (
 	"fmt"
+	"log"
 	"os"
 
 	"github.com/skyec/astore/metastore"
@@ -12,6 +13,7 @@ type WriteableKey interface {
 }
 
 type Store interface {
+	Initialize() error
 	Purge()
 	GetMeta(key []byte) []byte
 	PutMeta(key, value []byte)
@@ -93,7 +95,7 @@ func (s *store) GetRootPath() string {
 // GetKeyPath returns the path where keys are located
 // TODO: why is this public?
 func (s *store) GetKeyPath() string {
-	return fmt.Sprintf("%s/keys", s.GetRootPath())
+	return fmt.Sprintf("%s/keys", s.path)
 }
 
 // WriteToKey appends data to the conent stored at key.

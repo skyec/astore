@@ -53,6 +53,10 @@ func (s *mocStore) Purge() {
 
 }
 
+func (s *mocStore) Initialize() error {
+	return nil
+}
+
 func (s *mocStore) Close() error {
 	return nil
 }
