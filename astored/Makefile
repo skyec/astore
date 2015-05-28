@@ -4,7 +4,7 @@ astored: *.go
 	go build
 
 clean:
-	rm -f astored
+	rm -f astored *.test *.out
 test:
 	go test
 

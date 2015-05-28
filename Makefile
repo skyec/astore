@@ -4,7 +4,7 @@ test:
 	go test ./...
 
 clean: 
-	rm -rf *.dat
+	rm -rf *.dat *.out *.test
 	rm -rf build
 
 clean-astored:
