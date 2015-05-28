@@ -47,6 +47,7 @@ type store struct {
 	sequence    int64
 	kv          metastore.KVStore
 	initialized bool
+	st          *stats
 }
 
 func NewReadWriteableStore(path string) (ReadWriteableStore, error) {
@@ -57,6 +58,7 @@ func NewReadWriteableStore(path string) (ReadWriteableStore, error) {
 func newStore(path string) *store {
 	return &store{
 		path: path,
+		st:   newStats(),
 	}
 }
 
@@ -77,7 +79,9 @@ func (s *store) Initialize() (err error) {
 	conf.Bolt.BasePath = s.path
 	s.kv, err = metastore.NewKVStore(metastore.KV_TYPE_BOLT, conf)
 
+	s.st.run()
 	s.initialized = true
+	log.Print("Getting stared at path:", s.path)
 	return
 }
 
@@ -104,7 +108,13 @@ func (s *store) WriteToKey(key string, data []byte) error {
 	if err != nil {
 		return fmt.Errorf("error opening key: %s", err)
 	}
-	return k.Append(data)
+	err = k.Append(data)
+	if err != nil {
+		s.st.countError()
+		return err
+	}
+	s.st.countWrite()
+	return nil
 }
 
 // ReadEachFromKey reads the content at key and calls the callback, f, for each content block.
