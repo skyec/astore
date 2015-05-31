@@ -84,6 +84,55 @@ func TestKeyReadEach(t *testing.T) {
 	}
 
 }
+func TestKeyNewReadEach(t *testing.T) {
+	testDir := mkTestDir()
+	defer rmTestDir(testDir)
+
+	key := "test-key"
+	k, err := OpenKey(testDir, key)
+	if err != nil {
+		t.Fatalf("Failed to open key:", err)
+	}
+	k.useNewFormat = true
+
+	m1 := []byte("This is a test 1.")
+	m2 := []byte("This is a test 2.")
+
+	err = k.Append(m1)
+	if err != nil {
+		t.Fatalf("Failed to append to key: %s", err)
+	}
+
+	// Re-open the key again to test the common case
+	k, err = OpenKey(testDir, "test-key")
+	if err != nil {
+		t.Fatalf("Failed to open key:", err)
+	}
+	k.useNewFormat = true
+	err = k.Append(m2)
+	if err != nil {
+		t.Fatalf("Failed to append to key: %s", err)
+	}
+
+	if n, _ := k.Count(); n != 2 {
+		t.Error("wrong count: expected 2: got:", n)
+	}
+
+	buffer := &bytes.Buffer{}
+	k.ReadEach(func(r io.Reader) error {
+		_, err := io.Copy(buffer, r)
+		return err
+	})
+
+	expected := &bytes.Buffer{}
+	expected.Write(m1)
+	expected.Write(m2)
+
+	if !bytes.Equal(expected.Bytes(), buffer.Bytes()) {
+		t.Errorf("Buffers don't match. Expected:\n%s\nGot:\n%s", expected, buffer)
+	}
+
+}
 
 func TestSkipDuplicates(t *testing.T) {
 

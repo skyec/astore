@@ -43,11 +43,12 @@ type ReadWriteableStore interface {
 
 // Implements the ReadWriteableStore interface
 type store struct {
-	path        string
-	sequence    int64
-	kv          metastore.KVStore
-	initialized bool
-	st          *stats
+	path         string
+	sequence     int64
+	kv           metastore.KVStore
+	initialized  bool
+	st           *stats
+	useNewFormat bool
 }
 
 func NewReadWriteableStore(path string) (ReadWriteableStore, error) {
@@ -82,6 +83,10 @@ func (s *store) Initialize() (err error) {
 	s.st.run()
 	s.initialized = true
 	log.Print("Getting stared at path:", s.path)
+
+	if os.Getenv("USE_NEW_FORMAT") != "" {
+		s.useNewFormat = true
+	}
 	return
 }
 
@@ -108,6 +113,7 @@ func (s *store) WriteToKey(key string, data []byte) error {
 	if err != nil {
 		return fmt.Errorf("error opening key: %s", err)
 	}
+	k.useNewFormat = s.useNewFormat
 	err = k.Append(data)
 	if err != nil {
 		s.st.countError()
@@ -124,6 +130,7 @@ func (s *store) ReadEachFromKey(key string, f ReadFunc) error {
 	if err != nil {
 		return err
 	}
+	k.useNewFormat = s.useNewFormat
 	return k.ReadEach(f)
 }
 
