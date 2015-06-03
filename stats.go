@@ -3,7 +3,7 @@ package astore
 import (
 	"fmt"
 	"log"
-	"math"
+	"sync"
 	"time"
 )
 
@@ -50,54 +50,75 @@ func (st *stats) countError() {
 	st.cErrors.count()
 }
 
+type countType int
+
 type counter struct {
-	total, oneSec  int64
-	tenSecCounters [10]int64
-	chCount        chan struct{}
-	chTick         chan struct{}
-	startTime      time.Time
+	total, oneSec, lastSec, i10 int64
+	tenSecCounters              [10]int64
+	chCount                     chan countType
+	startTime                   int64
+	wg                          *sync.WaitGroup
+	unixNowFn                   func() int64
 }
+
+const (
+	COUNT_TICK countType = iota
+	COUNT_COUNT
+)
 
 func newCounter() *counter {
 	return &counter{
-		chCount: make(chan struct{}, statsCountChanBuffer),
-		chTick:  make(chan struct{}, statsCountChanBuffer),
+		chCount:   make(chan countType, statsCountChanBuffer),
+		wg:        &sync.WaitGroup{},
+		unixNowFn: func() int64 { return time.Now().Unix() },
 	}
 }
 
 func (c *counter) run() {
-	c.startTime = time.Now()
+	c.startTime = c.unixNowFn()
+	c.wg.Add(1)
 	go func() {
-		for {
-			var i10 int64
-			select {
-			case <-c.chCount:
+		for cType := range c.chCount {
+			switch cType {
+			case COUNT_COUNT:
 				c.total++
 				c.oneSec++
-				c.tenSecCounters[i10] = c.oneSec
-			case <-c.chTick:
-				i10 = (i10 + 1) % 10
+				c.tenSecCounters[c.i10] = c.oneSec
+			case COUNT_TICK:
+				c.i10 = (c.i10 + 1) % 10
+				c.lastSec = c.oneSec
 				c.oneSec = 0
 			}
 		}
+		c.wg.Done()
 	}()
 }
 
 func (c *counter) count() {
-	c.chCount <- struct{}{}
+	c.chCount <- COUNT_COUNT
 }
 
 func (c *counter) tick() {
-	c.chTick <- struct{}{}
+	c.chCount <- COUNT_TICK
 }
 
 func (c *counter) String() string {
+	now := c.unixNowFn()
+	elapsed := now - c.startTime
+	if elapsed == 0 {
+		elapsed = 1
+	}
+
 	return fmt.Sprintf("total: %d, 1s: %d, 10s: %.2f, all time avg: %.2f",
 		c.total,
-		c.oneSec,
+		c.lastSec,
 		avg(c.tenSecCounters[:]),
-		c.total/int64(math.Ceil(float64(time.Now().Sub(c.startTime)/time.Second))))
+		float64(c.total)/float64(elapsed))
+}
 
+func (c *counter) close() {
+	close(c.chCount)
+	c.wg.Wait()
 }
 
 func avg(list []int64) float32 {
@@ -105,5 +126,5 @@ func avg(list []int64) float32 {
 	for i := 0; i < len(list); i++ {
 		sum += list[i]
 	}
-	return float32(sum / int64(len(list)))
+	return float32(sum) / float32(len(list))
 }
