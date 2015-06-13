@@ -15,7 +15,7 @@ import (
 const (
 	defaultDirPermissions = 0755
 	defaultFilePermisions = 0644
-	MAX_HASH_LOG_SIZE     = 41 * 1024 * 1024
+	MAX_HASH_LOG_SIZE     = 41 * 1024 * 1024 // 1 million hashes
 	MAX_CONTENT_FILE_SIZE = 500 * 1024
 	MIN_GZ_SIZE           = 160
 )
@@ -29,7 +29,7 @@ type Key struct {
 	keyHashLogFileName string   // file name the hash log
 	initialized        bool     // flag indicating if the key directory has been initialized
 	maxHlogSz          uint     // maximum size of the hashlog; usually MAX_HASH_LOG_SIZE
-	maxContentSz       uint     //maximum size of a content file; usuall MAX_CONTENT_FILE_SIZE
+	maxContentSz       uint     // maximum size of a single append payload; usually MAX_CONTENT_FILE_SIZE
 	hashes             []string // array of hashes of the stored parts for this key
 	syncEnabled        bool     // calls os.File.Sync for every write if enabled
 
