@@ -36,7 +36,7 @@ func BenchmarkDefaultWrite(b *testing.B) {
 	blobs := blobs.GenerateBlobs(b.N)
 	b.ResetTimer()
 	for i := 0; i < len(blobs); i++ {
-		err := benchStore.WriteToKey(strconv.Itoa(i), blobs[i])
+		err := benchStore.WriteToKey(strconv.Itoa(i%10), blobs[i])
 		if err != nil {
 			b.Fatal("Failed to write to store:", err)
 		}
