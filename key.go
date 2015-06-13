@@ -2,15 +2,12 @@ package astore
 
 import (
 	"bufio"
-	"compress/gzip"
 	"crypto/sha1"
 	"encoding/binary"
 	"fmt"
 	"hash/crc64"
 	"io"
 	"os"
-	"path"
-	"strings"
 
 	"github.com/skyec/astore/fluentio"
 )
@@ -35,7 +32,6 @@ type Key struct {
 	maxContentSz       uint     //maximum size of a content file; usuall MAX_CONTENT_FILE_SIZE
 	hashes             []string // array of hashes of the stored parts for this key
 	syncEnabled        bool     // calls os.File.Sync for every write if enabled
-	useNewFormat       bool     // temporary flag to switch to using the new on-disk format
 
 }
 
@@ -102,45 +98,7 @@ func (k *Key) Append(data []byte) error {
 
 	}
 
-	// Use the new on-disk format
-	if k.useNewFormat {
-		return k.newAppend(data)
-	}
-
-	fileEx := "bin"
-	if cSize >= MIN_GZ_SIZE {
-		fileEx = "gz"
-	}
-
-	dataFileName := fmt.Sprintf("%s/%X.%s", k.keyDataDir, sha1.Sum(data), fileEx)
-
-	if _, err := os.Stat(dataFileName); err == nil {
-
-		// The file already exists so this must be a duplicate.
-		// Skip the file (and log - TODO).
-		return nil
-	}
-
-	dataWriter := fluentio.OpenFile(dataFileName, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, defaultFilePermisions)
-
-	if cSize >= MIN_GZ_SIZE {
-		dataWriter.SetWriter(gzip.NewWriter(dataWriter.GetFile()))
-	}
-
-	err := dataWriter.Write(data).
-		Flush().
-		Sync(k.syncEnabled).
-		Close()
-
-	if err != nil {
-		return fmt.Errorf("Error saving content file: %s", err)
-	}
-
-	return k.writeHashLog(path.Base(dataFileName))
-}
-
-func (k *Key) newAppend(data []byte) error {
-	if err := k.writeContentNew(data); err != nil {
+	if err := k.writeContent(data); err != nil {
 		return err
 	}
 	return k.writeHashLog(fmt.Sprintf("%X", sha1.Sum(data)))
@@ -154,7 +112,7 @@ type contentHeader struct {
 	Length uint64
 }
 
-func (k *Key) writeContentNew(data []byte) error {
+func (k *Key) writeContent(data []byte) error {
 
 	header := &contentHeader{magicNumber, crc64.Checksum(data, crc64.MakeTable(crc64.ISO)), uint64(len(data))}
 
@@ -188,7 +146,7 @@ func (k *Key) writeContentNew(data []byte) error {
 
 }
 
-func (k *Key) newReadEach(r ReadFunc) error {
+func (k *Key) ReadEach(r ReadFunc) error {
 	file, err := os.Open(fmt.Sprintf("%s/content.dat", k.keyDataDir))
 	for err == nil {
 		header := &contentHeader{}
@@ -218,44 +176,6 @@ func (k *Key) Count() (int, error) {
 }
 
 type ReadFunc func(r io.Reader) error
-
-func (k *Key) ReadEach(r ReadFunc) error {
-
-	if k.useNewFormat {
-		return k.newReadEach(r)
-	}
-
-	if k.hashes == nil {
-		if err := k.loadHashes(); err != nil {
-			return err
-		}
-	}
-
-	for _, h := range k.hashes {
-		fname := fmt.Sprintf("%s/%s", k.keyDataDir, h)
-		err := func() error {
-			file, err := os.Open(fname)
-			if err != nil {
-				return err
-			}
-			defer file.Close()
-
-			var reader io.Reader = file
-			if strings.HasSuffix(fname, ".gz") {
-				reader, err = gzip.NewReader(file)
-				if err != nil {
-					return err
-				}
-			}
-			return r(reader)
-		}()
-		if err != nil {
-			return err
-		}
-	}
-
-	return nil
-}
 
 func (k *Key) GetKeyName() string {
 	return k.originalKeyName
