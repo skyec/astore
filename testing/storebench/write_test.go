@@ -3,6 +3,7 @@ package storebench
 import (
 	"io/ioutil"
 	"log"
+	"os"
 	"strconv"
 	"testing"
 
@@ -32,7 +33,6 @@ func BenchmarkDefaultWrite(b *testing.B) {
 		log.Fatal("Failed to initialze the store:", err)
 	}
 
-	log.Print("############\nBe sure to 'rm -rf %s'", benchDir)
 	blobs := blobs.GenerateBlobs(b.N)
 	b.ResetTimer()
 	for i := 0; i < len(blobs); i++ {
@@ -41,4 +41,7 @@ func BenchmarkDefaultWrite(b *testing.B) {
 			b.Fatal("Failed to write to store:", err)
 		}
 	}
+	b.StopTimer()
+	os.RemoveAll(benchDir)
+
 }
