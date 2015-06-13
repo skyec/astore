@@ -93,7 +93,6 @@ func TestKeyNewReadEach(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to open key:", err)
 	}
-	k.useNewFormat = true
 
 	m1 := []byte("This is a test 1.")
 	m2 := []byte("This is a test 2.")
@@ -108,7 +107,6 @@ func TestKeyNewReadEach(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to open key:", err)
 	}
-	k.useNewFormat = true
 	err = k.Append(m2)
 	if err != nil {
 		t.Fatalf("Failed to append to key: %s", err)
