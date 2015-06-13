@@ -56,7 +56,7 @@ func TestKeyReadEach(t *testing.T) {
 	}
 
 	// Re-open the key again to test the common case
-	k, err = OpenKey(testDir, "test-key")
+	k, err = OpenKey(testDir, key)
 	if err != nil {
 		t.Fatalf("Failed to open key:", err)
 	}

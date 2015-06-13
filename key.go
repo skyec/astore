@@ -75,12 +75,16 @@ func (k *Key) checkFileSzFn(fi os.FileInfo) error {
 }
 
 func (k *Key) writeHashLog(hash string) error {
-	return fluentio.OpenFile(k.keyHashLogFileName, os.O_WRONLY|os.O_APPEND|os.O_CREATE, defaultFilePermisions).
+	if err := fluentio.OpenFile(k.keyHashLogFileName, os.O_WRONLY|os.O_APPEND|os.O_CREATE, defaultFilePermisions).
 		Stat(k.checkFileSzFn).
 		Write([]byte(hash + "\n")).
 		Flush().
 		Sync(k.syncEnabled).
-		Close()
+		Close(); err != nil {
+		return err
+	}
+	k.hashes = append(k.hashes, hash)
+	return nil
 }
 
 func (k *Key) Append(data []byte) error {
@@ -97,11 +101,31 @@ func (k *Key) Append(data []byte) error {
 		}
 
 	}
+	if k.hashes == nil {
+		if err := k.loadHashes(); err != nil {
+			return err
+		}
+	}
+
+	hash := fmt.Sprintf("%X", sha1.Sum(data))
+	if k.hashExists(hash) {
+		// TODO: add a counter for duplicate hits
+		return nil
+	}
 
 	if err := k.writeContent(data); err != nil {
 		return err
 	}
-	return k.writeHashLog(fmt.Sprintf("%X", sha1.Sum(data)))
+	return k.writeHashLog(hash)
+}
+
+func (k *Key) hashExists(hash string) bool {
+	for _, h := range k.hashes {
+		if h == hash {
+			return true
+		}
+	}
+	return false
 }
 
 const magicNumber uint32 = 0xff00ff00
@@ -157,7 +181,7 @@ func (k *Key) ReadEach(r ReadFunc) error {
 			err = r(io.LimitReader(file, int64(header.Length)))
 		}
 	}
-	if err == io.EOF {
+	if err == io.EOF || os.IsNotExist(err) {
 		return nil
 	}
 	return err
@@ -165,10 +189,8 @@ func (k *Key) ReadEach(r ReadFunc) error {
 
 func (k *Key) Count() (int, error) {
 
-	if k.hashes == nil {
-		if err := k.loadHashes(); err != nil {
-			return 0, err
-		}
+	if err := k.loadHashes(); err != nil {
+		return 0, err
 	}
 
 	return len(k.hashes), nil
