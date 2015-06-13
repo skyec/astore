@@ -41,6 +41,10 @@ type ReadWriteableStore interface {
 	WriteableKey
 }
 
+type appendableKey interface {
+	Append(key string, value []byte) error
+}
+
 // Implements the ReadWriteableStore interface
 type store struct {
 	path        string
@@ -48,6 +52,7 @@ type store struct {
 	kv          metastore.KVStore
 	initialized bool
 	st          *stats
+	keyWriter   appendableKey
 }
 
 func NewReadWriteableStore(path string) (ReadWriteableStore, error) {
@@ -79,6 +84,8 @@ func (s *store) Initialize() (err error) {
 	conf.Bolt.BasePath = s.path
 	s.kv, err = metastore.NewKVStore(metastore.KV_TYPE_BOLT, conf)
 
+	s.keyWriter, _ = newDirectKey(s.GetKeyPath())
+
 	s.st.run()
 	s.initialized = true
 	log.Print("Getting stared at path:", s.path)
@@ -105,11 +112,7 @@ func (s *store) GetKeyPath() string {
 
 // WriteToKey appends data to the conent stored at key.
 func (s *store) WriteToKey(key string, data []byte) error {
-	k, err := OpenKey(s.GetKeyPath(), key)
-	if err != nil {
-		return fmt.Errorf("error opening key: %s", err)
-	}
-	err = k.Append(data)
+	err := s.keyWriter.Append(key, data)
 	if err != nil {
 		s.st.countError()
 		return err
