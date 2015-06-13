@@ -15,8 +15,17 @@ var benchStore astore.WriteableStore
 var benchDir string
 
 func init() {
+
+	file, err := os.OpenFile("test.log", os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0644)
+	if err != nil {
+		panic(err)
+	}
+	log.SetOutput(file)
+
 }
-func BenchmarkDefaultWrite(b *testing.B) {
+
+func writeBench(b *testing.B, keyMod int) {
+
 	benchDir, err := ioutil.TempDir("", "astore-benchmarking-")
 	if err != nil {
 		log.Fatal(err)
@@ -35,7 +44,7 @@ func BenchmarkDefaultWrite(b *testing.B) {
 	blobs := blobs.GenerateBlobs(b.N)
 	b.ResetTimer()
 	for i := 0; i < len(blobs); i++ {
-		err := benchStore.WriteToKey(strconv.Itoa(i%10), blobs[i])
+		err := benchStore.WriteToKey(strconv.Itoa(i%keyMod), blobs[i])
 		if err != nil {
 			b.Fatal("Failed to write to store:", err)
 		}
@@ -43,4 +52,11 @@ func BenchmarkDefaultWrite(b *testing.B) {
 	b.StopTimer()
 	os.RemoveAll(benchDir)
 
+}
+func BenchmarkCommonKey10(b *testing.B) {
+	writeBench(b, 10)
+}
+
+func BenchmarkUniqueKeys(b *testing.B) {
+	writeBench(b, b.N)
 }
