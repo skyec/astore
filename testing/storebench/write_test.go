@@ -25,7 +25,6 @@ func BenchmarkDefaultWrite(b *testing.B) {
 	benchStore, err := astore.NewReadWriteableStore(benchDir)
 	if err != nil {
 		log.Fatal(err)
-
 	}
 
 	err = benchStore.Initialize()
