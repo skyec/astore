@@ -4,5 +4,5 @@ bench:
 	go test -bench . -cpuprofile cpu.out -blockprofile blocks.out -benchtime 5s
 
 clean:
-	rm -f *.out
+	rm -f *.out *.log
 
