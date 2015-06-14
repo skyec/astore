@@ -16,7 +16,7 @@ func TestDirectKey(t *testing.T) {
 	}
 
 	value := []byte("bar")
-	key := "foo"
+	key := newSha1Key("foo")
 	err = dk.Append(key, value)
 	if err != nil {
 		t.Fatal(err)

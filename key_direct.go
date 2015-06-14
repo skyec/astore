@@ -9,7 +9,7 @@ func newDirectKey(basepath string) (appendableKey, error) {
 	return &directKey{path: basepath}, nil
 }
 
-func (kd *directKey) Append(key string, value []byte) error {
+func (kd *directKey) Append(key hashableKey, value []byte) error {
 	k, err := OpenKey(kd.path, key)
 	if err != nil {
 		return err

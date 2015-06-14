@@ -42,7 +42,7 @@ type ReadWriteableStore interface {
 }
 
 type appendableKey interface {
-	Append(key string, value []byte) error
+	Append(key hashableKey, value []byte) error
 }
 
 // Implements the ReadWriteableStore interface
@@ -112,7 +112,9 @@ func (s *store) GetKeyPath() string {
 
 // WriteToKey appends data to the conent stored at key.
 func (s *store) WriteToKey(key string, data []byte) error {
-	err := s.keyWriter.Append(key, data)
+	hk := &sha1Key{}
+	hk.Set(key)
+	err := s.keyWriter.Append(hk, data)
 	if err != nil {
 		s.st.countError()
 		return err
@@ -124,7 +126,9 @@ func (s *store) WriteToKey(key string, data []byte) error {
 // ReadEachFromKey reads the content at key and calls the callback, f, for each content block.
 func (s *store) ReadEachFromKey(key string, f ReadFunc) error {
 
-	k, err := OpenKey(s.GetKeyPath(), key)
+	hk := &sha1Key{}
+	hk.Set(key)
+	k, err := OpenKey(s.GetKeyPath(), hk)
 	if err != nil {
 		return err
 	}
@@ -134,7 +138,9 @@ func (s *store) ReadEachFromKey(key string, f ReadFunc) error {
 // GetCountFromKey returns the number of items saved at key.
 func (s *store) GetCountFromKey(key string) (int, error) {
 
-	k, err := OpenKey(s.GetKeyPath(), key)
+	hk := &sha1Key{}
+	hk.Set(key)
+	k, err := OpenKey(s.GetKeyPath(), hk)
 	if err != nil {
 		return 0, err
 	}

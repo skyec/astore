@@ -6,7 +6,6 @@ import (
 	"io/ioutil"
 	"log"
 	"os"
-	"regexp"
 	"strings"
 	"testing"
 )
@@ -16,7 +15,7 @@ func TestOpenKey(t *testing.T) {
 	testDir := mkTestDir()
 	defer rmTestDir(testDir)
 
-	_, err := OpenKey(testDir, "test-key")
+	_, err := OpenKey(testDir, newSha1Key("test-key"))
 	if err != nil {
 		t.Fatalf("Failed to open key:", err)
 	}
@@ -26,7 +25,7 @@ func TestKeyAppend(t *testing.T) {
 	testDir := mkTestDir()
 	defer rmTestDir(testDir)
 
-	k, err := OpenKey(testDir, "test-key")
+	k, err := OpenKey(testDir, newSha1Key("test-key"))
 	if err != nil {
 		t.Fatalf("Failed to open key:", err)
 	}
@@ -41,7 +40,7 @@ func TestKeyReadEach(t *testing.T) {
 	testDir := mkTestDir()
 	defer rmTestDir(testDir)
 
-	key := "test-key"
+	key := newSha1Key("test-key")
 	k, err := OpenKey(testDir, key)
 	if err != nil {
 		t.Fatalf("Failed to open key:", err)
@@ -88,7 +87,7 @@ func TestKeyNewReadEach(t *testing.T) {
 	testDir := mkTestDir()
 	defer rmTestDir(testDir)
 
-	key := "test-key"
+	key := newSha1Key("test-key")
 	k, err := OpenKey(testDir, key)
 	if err != nil {
 		t.Fatalf("Failed to open key:", err)
@@ -103,7 +102,7 @@ func TestKeyNewReadEach(t *testing.T) {
 	}
 
 	// Re-open the key again to test the common case
-	k, err = OpenKey(testDir, "test-key")
+	k, err = OpenKey(testDir, newSha1Key("test-key"))
 	if err != nil {
 		t.Fatalf("Failed to open key:", err)
 	}
@@ -137,7 +136,7 @@ func TestSkipDuplicates(t *testing.T) {
 	testDir := mkTestDir()
 	defer rmTestDir(testDir)
 
-	k, err := OpenKey(testDir, "test-key")
+	k, err := OpenKey(testDir, newSha1Key("test-key"))
 	if err != nil {
 		t.Fatalf("Failed to open key:", err)
 	}
@@ -176,7 +175,7 @@ func TestReadBeforeAppend(t *testing.T) {
 	defer rmTestDir(testDir)
 
 	originalKey := "testing key"
-	k, err := OpenKey(testDir, originalKey)
+	k, err := OpenKey(testDir, newSha1Key(originalKey))
 	if err != nil {
 		t.Fatalf("Failed to open key:", err)
 	}
@@ -195,7 +194,7 @@ func TestGetOriginalKeyName(t *testing.T) {
 	defer rmTestDir(testDir)
 
 	originalKey := "this is the original key"
-	k, err := OpenKey(testDir, originalKey)
+	k, err := OpenKey(testDir, newSha1Key(originalKey))
 	if err != nil {
 		t.Fatalf("Failed to open key:", err)
 	}
@@ -213,18 +212,9 @@ func TestKeyIsSanitized(t *testing.T) {
 	defer rmTestDir(testDir)
 
 	originalKey := "this key should be hashed ./"
-	k, err := OpenKey(testDir, originalKey)
+	k, err := OpenKey(testDir, newSha1Key(originalKey))
 	if err != nil {
 		t.Fatalf("Failed to open key:", err)
-	}
-
-	badChars := regexp.MustCompile("[^a-zA-Z0-9]")
-	if badChars.MatchString(k.keyName) {
-		t.Errorf("Key name'%s' contains bad chars that match the regex: '%s'", k.keyName, badChars.String())
-	}
-
-	if k.keyName == originalKey {
-		t.Error("key is the same as the original:", k.keyName)
 	}
 
 	if strings.Contains(k.keyDir, originalKey) {
@@ -237,7 +227,7 @@ func TestMaxContentSz(t *testing.T) {
 	testDir := mkTestDir()
 	defer rmTestDir(testDir)
 
-	k, err := OpenKey(testDir, "ignored")
+	k, err := OpenKey(testDir, newSha1Key("ignored"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -254,7 +244,7 @@ func TestMaxHashLogSz(t *testing.T) {
 	testDir := mkTestDir()
 	defer rmTestDir(testDir)
 
-	k, err := OpenKey(testDir, "ignored")
+	k, err := OpenKey(testDir, newSha1Key("ignored"))
 	if err != nil {
 		t.Fatal(err)
 	}

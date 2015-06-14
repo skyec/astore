@@ -20,41 +20,84 @@ const (
 	MIN_GZ_SIZE           = 160
 )
 
+type hashableKey interface {
+	fmt.Stringer
+	Set(original string)
+	Get() []byte
+	Len() int
+}
+
+type sha1Key struct {
+	bits []byte
+}
+
+func (sk *sha1Key) Set(original string) {
+	sum := sha1.Sum([]byte(original))
+	sk.bits = make([]byte, len(sum))
+	copy(sk.bits, sum[:])
+}
+
+func (sk *sha1Key) Get() []byte {
+	return sk.bits
+}
+func (sk *sha1Key) Len() int {
+	return len(sk.bits)
+}
+
+func (sk *sha1Key) String() string {
+	return fmt.Sprintf("%X", sk.bits)
+}
+
+func newSha1Key(original string) *sha1Key {
+	sk := &sha1Key{}
+	sk.Set(original)
+
+	return sk
+}
+
+func newSha1KeyFromHash(hash []byte) *sha1Key {
+	sk := &sha1Key{}
+	sk.bits = make([]byte, len(hash))
+	copy(sk.bits, hash)
+
+	return sk
+}
+
 type Key struct {
-	keyName            string   // name of the key
-	originalKeyName    string   // original name of the key
-	baseDir            string   // base directory for the keys
-	keyDir             string   // directory where the data for a single key lives
-	keyDataDir         string   // directory in the key where the data files live
-	keyHashLogFileName string   // file name the hash log
-	initialized        bool     // flag indicating if the key directory has been initialized
-	maxHlogSz          uint     // maximum size of the hashlog; usually MAX_HASH_LOG_SIZE
-	maxContentSz       uint     // maximum size of a single append payload; usually MAX_CONTENT_FILE_SIZE
-	hashes             []string // array of hashes of the stored parts for this key
-	syncEnabled        bool     // calls os.File.Sync for every write if enabled
+	keyName            hashableKey // the key
+	originalKeyName    string      // original name of the key
+	baseDir            string      // base directory for the keys
+	keyDir             string      // directory where the data for a single key lives
+	keyDataDir         string      // directory in the key where the data files live
+	keyHashLogFileName string      // file name the hash log
+	initialized        bool        // flag indicating if the key directory has been initialized
+	maxHlogSz          uint        // maximum size of the hashlog; usually MAX_HASH_LOG_SIZE
+	maxContentSz       uint        // maximum size of a single append payload; usually MAX_CONTENT_FILE_SIZE
+	hashes             []string    // array of hashes of the stored parts for this key
+	syncEnabled        bool        // calls os.File.Sync for every write if enabled
 
 }
 
 // OpenKey opens the key, keyName and basePath. A *Key or error is returned. If the DISABLE_ASTORE_FSYNC
 // environment variable is set (to any value - even zero), then writes are made without calling os.File.Sync.
 // This improves performance significantly but increases the risk of data corruption.
-func OpenKey(basePath, keyName string) (*Key, error) {
+func OpenKey(basePath string, hkey hashableKey) (*Key, error) {
 
 	key := &Key{
-		keyName:         sanitizeKeyName(keyName),
-		originalKeyName: keyName,
-		baseDir:         basePath,
-		maxHlogSz:       MAX_HASH_LOG_SIZE,
-		maxContentSz:    MAX_CONTENT_FILE_SIZE,
-		syncEnabled:     true,
-	}
+		keyName:      hkey,
+		baseDir:      basePath,
+		maxHlogSz:    MAX_HASH_LOG_SIZE,
+		maxContentSz: MAX_CONTENT_FILE_SIZE,
+		syncEnabled:  true,
 
-	key.keyDir = fmt.Sprintf("%s/%s/%s/%s/%s",
-		key.baseDir,
-		key.keyName[:1],
-		key.keyName[1:2],
-		key.keyName[2:3],
-		key.keyName)
+		keyDir: fmt.Sprintf("%s/%s/%s/%s/%s",
+			basePath,
+			hkey.Get()[0],
+			hkey.Get()[1],
+			hkey.Get()[2],
+			hkey,
+		),
+	}
 
 	key.keyDataDir = fmt.Sprintf("%s/data", key.keyDir)
 	key.keyHashLogFileName = fmt.Sprintf("%s/txlog", key.keyDir)
