@@ -10,6 +10,7 @@
 * Use a transaction Log in the write path to speed up writes
   * Write to a common Tx log (or more than one for parallel writes)
   * Background committer thread commits Tx's to keys
+  * See WRITELOG.md for design notes
 
 ## Kafka Consumer 
 
