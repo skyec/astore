@@ -37,8 +37,3 @@ The response is an array of all the appends that have been made in FIFO order.
         [{"your":"custom","data":"struct"}]
 ```
 
-# TODO
-
-* Only compress content when it is > 150 bytes.
-* Add a protobuf interface so that *any* content can be saved, not just JSON.
-* Distribute data so that this can scale beyond a single machine.
